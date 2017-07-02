@@ -17,6 +17,11 @@ const server = express()
 // Create the WebSockets server
 const wss = new SocketServer({ server });
 
+/*
+* Function to broadcast new message to all users
+* If websocket is open, create a unique id using uuidv1 package for the message and then
+* send the message in JSON format to all clinets
+*/
 wss.broadcast = function broadcast(data) {
   wss.clients.forEach(function each(client) {
     if (client.readyState === WebSocket.OPEN) {
@@ -27,6 +32,10 @@ wss.broadcast = function broadcast(data) {
   });
 };
 
+/*
+* Function to broadcast client count to all users
+* Broadcasted message is in JSON format with a unique id assigned
+*/
 wss.broadcastClientsCount=function broadcastClientsCount(){
   console.log("Current clients are "+wss.clients.size);
   wss.clients.forEach(function each(client) {
@@ -35,8 +44,6 @@ wss.broadcastClientsCount=function broadcastClientsCount(){
       newMessage['type']='clientsCount';
       newMessage['count']=wss.clients.size;
       newMessage['id']=uuidv1();
-      //console.log("user count : "+newMessage.count);
-      console.log(JSON.stringify(newMessage));
       client.send(JSON.stringify(newMessage));
     }
   });
@@ -47,18 +54,18 @@ wss.broadcastClientsCount();
 // When a client connects they are assigned a socket, represented by
 // the ws parameter in the callback.
 wss.on('connection', (ws) => {
+
+  //On connection, boradcast how many clients are online.
   wss.broadcastClientsCount();
-  // Set up a callback for when a client closes the socket. This usually means they closed their browser.
+  // Broadcast client count when a client closes the socket. This usually means they closed their browser.
   ws.on('close', () => {
     wss.broadcastClientsCount();
-    console.log('Client disconnected');
-    console.log("There are "+wss.clients.size+" users online");
   });
+
+  //When there is an incoming emssage from websoket server, broadcast message and broadcast client count
+  //data: incoming message
   ws.on('message',function incoming(data){
-    console.log("incoming data type is ",typeof data);
-    console.log("incoming data is ",data);
     wss.broadcast(data);
-    wss.broadcastClientsCount();
   });
 });
 
